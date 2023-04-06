@@ -1,0 +1,588 @@
+-- Business Context:
+
+# GL-Eats is a Food Delivery App that delivers order in 100 cities across multiple countries.
+# Over the last few weeks, their revenue has dipped and multiple Teams in GL-eats like Marketing,
+# Delivery Operations and Revenue Management are rushing to find answers to a lot of questions to solve this problem.
+
+
+-- Our Objective:
+
+# Our goal is to Architect a data pipeline in MySQL to cater to all the questions asked by the various Teams,
+# by creating and maintaining a database through which we can ingest our data generated every week 
+# and finally create usable tables which can be readily queried by the business stakeholders to find answers to their questions.
+
+
+-- Creating the database:
+-- This will be done in the following steps.
+	# Step 1: Create the strucutre for the main Database and multiple related tables
+    # Step 2: Import Data
+    # Step 3: Create stored procedures
+    # Step 4: Create views for the Marketing, Delivery Operations and Revenue Management teams
+    # Step 5: Create functions to solve complex business problems
+    # Step 6: Exploring the data using queries
+
+
+-- Creating the strucutre for the main Database + a temporary database, and multiple related tables
+DROP DATABASE IF EXISTS GL_EATS;
+CREATE DATABASE GL_EATS;
+USE GL_EATS;
+
+create table gl_eats_t (
+	WEEK_NUMBER integer,
+	CUSTOMER_ID	integer,
+	CUSTOMER_NAME varchar(20),
+	COUNTRY_CD VARCHAR(25),
+	EMAIL_ADDRESS VARCHAR(50),
+	ORDER_ID integer,
+	ORDER_COST integer,
+	ORDER_ITEMS INTEGER,
+	DISCOUNT INTEGER,
+	DELIVERY_EMP_ID INTEGER,
+	DELIVERY_ID INTEGER,
+	STAR_RATING INTEGER,
+	DELIVERY_STATUS varchar(10),
+	RESTAURANT_ID INTEGER,
+	RESTAURANT_NAME VARCHAR(50),
+	CITY_NAME VARCHAR(60),
+	ADDRESS VARCHAR(150),
+	LOCALITY VARCHAR(60),
+	LONGITUDE DECIMAL(16,12),
+	LATITUDE DECIMAL(16,12),
+	CUISINES VARCHAR(100),
+	RESTAURANT_RATING DECIMAL(2,1),
+    PRIMARY KEY (CUSTOMER_ID, ORDER_ID, DELIVERY_ID, RESTAURANT_ID)
+);
+
+create table temp_t ( # temporary table
+	WEEK_NUMBER integer,
+	CUSTOMER_ID	integer,
+	CUSTOMER_NAME varchar(20),
+	COUNTRY_CD VARCHAR(25),
+	EMAIL_ADDRESS VARCHAR(50),
+	ORDER_ID integer,
+	ORDER_COST integer,
+	ORDER_ITEMS INTEGER,
+	DISCOUNT INTEGER,
+	DELIVERY_EMP_ID INTEGER,
+	DELIVERY_ID INTEGER,
+	STAR_RATING INTEGER,
+	DELIVERY_STATUS varchar(10),
+	RESTAURANT_ID INTEGER,
+	RESTAURANT_NAME VARCHAR(50),
+	CITY_NAME VARCHAR(60),
+	ADDRESS VARCHAR(150),
+	LOCALITY VARCHAR(60),
+	LONGITUDE DECIMAL(16,12),
+	LATITUDE DECIMAL(16,12),
+	CUISINES VARCHAR(100),
+	RESTAURANT_RATING DECIMAL(2,1),
+    PRIMARY KEY (CUSTOMER_ID, ORDER_ID, DELIVERY_ID, RESTAURANT_ID)
+);
+
+create table gl_eats_cust_t ( # customer table
+	CUSTOMER_ID	integer,
+	CUSTOMER_NAME varchar(20),
+	EMAIL_ADDRESS VARCHAR(50),
+    COUNTRY_CD VARCHAR(25),
+	PRIMARY KEY (CUSTOMER_ID)
+);
+
+create table gl_eats_rest_t ( # restaurant table)
+	RESTAURANT_ID INTEGER,
+	RESTAURANT_NAME VARCHAR(50),
+	COUNTRY_CD VARCHAR(25),
+    CITY_NAME VARCHAR(60),
+	ADDRESS VARCHAR(150),
+	LOCALITY VARCHAR(60),
+	LONGITUDE DECIMAL(16,12),
+	LATITUDE DECIMAL(16,12),
+	CUISINES VARCHAR(100),
+	RESTAURANT_RATING DECIMAL(2,1),
+	PRIMARY KEY (RESTAURANT_ID)
+);
+
+create table gl_eats_ord_t ( # order table
+	ORDER_ID integer,
+    DELIVERY_EMP_ID INTEGER,
+    CUSTOMER_ID	integer,
+	RESTAURANT_ID INTEGER,
+    ORDER_COST integer,
+	ORDER_ITEMS INTEGER,
+	DISCOUNT INTEGER,
+    WEEK_NUMBER integer,
+    PRIMARY KEY (ORDER_ID)
+);
+
+create table gl_eats_del_t ( # delivery table
+	
+	DELIVERY_ID integer,
+    DELIVERY_EMP_ID INTEGER,
+    ORDER_ID INTEGER,
+    DELIVERY_STATUS VARCHAR(10),
+    RESTAURANT_ID integer,
+    STAR_RATING INTEGER,
+    WEEK_NUMBER integer,
+    PRIMARY KEY (ORDER_ID)
+);
+
+
+-- Importing the data. We have data for weeks 1,2,3 & 4. 
+truncate temp_t;
+LOAD DATA LOCAL INFILE "C:/Users/Jake Wellian/Documents/Data analytics/SQL/GreatLearning/Week 3/Data/gl_eats_dump_week-4.csv"
+INTO TABLE temp_t
+FIELDS TERMINATED BY ',' 
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS;
+
+-- Creating Stored Procedures. These will help to add any new data provided by Gl_Eats.
+DELIMITER $$ 
+CREATE PROCEDURE gl_eats_p()
+BEGIN
+	INSERT INTO gl_eats.gl_eats_t (
+		WEEK_NUMBER,
+		CUSTOMER_ID,
+		CUSTOMER_NAME,
+		COUNTRY_CD,
+		EMAIL_ADDRESS,
+		ORDER_ID,
+		ORDER_COST,
+		ORDER_ITEMS,
+		DISCOUNT,
+		DELIVERY_EMP_ID,
+		DELIVERY_ID,
+		STAR_RATING,
+		DELIVERY_STATUS,
+		RESTAURANT_ID,
+		RESTAURANT_NAME,
+		CITY_NAME,
+		ADDRESS,
+		LOCALITY,
+		LONGITUDE,
+		LATITUDE,
+		CUISINES,
+		RESTAURANT_RATING
+	) SELECT * FROM gl_eats.temp_t;
+	END;
+
+Call gl_eats_p();
+
+
+DELIMITER $$
+CREATE PROCEDURE gl_eats_cust_p()
+BEGIN
+	INSERT INTO gl_eats_cust_t (
+        CUSTOMER_ID, 
+        CUSTOMER_NAME, 
+        EMAIL_ADDRESS, 
+        COUNTRY_CD
+    )
+    SELECT DISTINCT 
+	CUSTOMER_ID, 
+        CUSTOMER_NAME, 
+        EMAIL_ADDRESS, 
+        COUNTRY_CD 
+	FROM gl_eats_t WHERE CUSTOMER_ID NOT IN (SELECT DISTINCT CUSTOMER_ID FROM gl_eats_cust_t);
+END;
+
+Call gl_eats_cust_p();
+
+DELIMITER $$
+CREATE PROCEDURE gl_eats_del_p(weeknum INTEGER)
+BEGIN
+	INSERT INTO gl_eats_del_t (
+	DELIVERY_ID,
+	DELIVERY_EMP_ID, 
+        ORDER_ID, 
+        DELIVERY_STATUS, 
+        RESTAURANT_ID, 
+        STAR_RATING,
+        WEEK_NUMBER
+	) 
+    SELECT DISTINCT
+	DELIVERY_ID,
+	DELIVERY_EMP_ID, 
+        ORDER_ID, 
+        DELIVERY_STATUS, 
+        RESTAURANT_ID, 
+        STAR_RATING,
+        WEEK_NUMBER
+	FROM gl_eats_t WHERE WEEK_NUMBER = weeknum;
+END;
+
+CALL gl_eats_del_p(4);
+
+
+DELIMITER $$
+CREATE PROCEDURE gl_eats_ord_p(weeknum INTEGER)
+BEGIN
+	INSERT INTO gl_eats_ord_t (
+	ORDER_ID, 
+        DELIVERY_EMP_ID, 
+        CUSTOMER_ID, 
+        RESTAURANT_ID,
+        ORDER_COST, 
+        ORDER_ITEMS, 
+        DISCOUNT, 
+        WEEK_NUMBER
+	) 
+    SELECT DISTINCT
+	ORDER_ID, 
+        DELIVERY_EMP_ID, 
+        CUSTOMER_ID, 
+        RESTAURANT_ID ,
+        ORDER_COST, 
+        ORDER_ITEMS, 
+        DISCOUNT, 
+        WEEK_NUMBER
+	FROM gl_eats_t WHERE WEEK_NUMBER = weeknum;
+END;
+
+CALL gl_eats_ord_p(4);
+
+
+DELIMITER $$
+CREATE PROCEDURE gl_eats_rest_p()
+BEGIN
+    INSERT INTO gl_eats_rest_t (
+        RESTAURANT_ID, 
+        RESTAURANT_NAME, 
+        CITY_NAME, 
+        COUNTRY_CD,
+        ADDRESS, 
+        LOCALITY, 
+        LONGITUDE, 
+        LATITUDE, 
+        CUISINES, 
+        RESTAURANT_RATING
+	) 
+    SELECT DISTINCT 
+	RESTAURANT_ID, 
+        RESTAURANT_NAME, 
+        CITY_NAME, 
+        COUNTRY_CD,
+        ADDRESS, 
+        LOCALITY, 
+        LONGITUDE, 
+        LATITUDE, 
+        CUISINES, 
+        RESTAURANT_RATING
+	FROM gl_eats_t WHERE RESTAURANT_ID NOT IN (SELECT DISTINCT RESTAURANT_ID FROM gl_eats_rest_t);
+END;
+
+CALL gl_eats_rest_p();
+
+-- Creating View tables for the different business teams
+CREATE VIEW gl_eats_del_ord_v AS
+    SELECT 
+        ord.ORDER_ID,
+        ord.CUSTOMER_ID,
+        ord.RESTAURANT_ID,
+        ord.DELIVERY_EMP_ID,
+        ord.ORDER_COST,
+        ord.DISCOUNT,
+        ord.WEEK_NUMBER,
+        del.DELIVERY_ID,
+        del.DELIVERY_STATUS,
+        del.STAR_RATING
+    FROM gl_eats_ord_t ord 
+        INNER JOIN gl_eats_del_t del 
+            ON ord.ORDER_ID = del.ORDER_ID;
+            
+            
+CREATE VIEW gl_eats_del_rest_v AS
+    SELECT 
+        rest.RESTAURANT_ID,
+        rest.RESTAURANT_NAME,
+        rest.CITY_NAME,
+        rest.COUNTRY_CD,
+        rest.RESTAURANT_RATING,
+        del.DELIVERY_ID,
+        del.DELIVERY_EMP_ID,
+        del.ORDER_ID,
+        del.DELIVERY_STATUS,
+        del.STAR_RATING,
+        del.WEEK_NUMBER
+    FROM gl_eats_rest_t rest
+        JOIN gl_eats_del_t del 
+            ON rest.RESTAURANT_ID = del.RESTAURANT_ID;
+            
+CREATE VIEW gl_eats_cust_ord_v AS
+    SELECT 
+        cust.CUSTOMER_ID,
+        cust.CUSTOMER_NAME,
+        cust.COUNTRY_CD,
+        ord.ORDER_ID,
+        ord.RESTAURANT_ID,
+        ord.ORDER_COST,
+        ord.ORDER_ITEMS,
+        ord.DISCOUNT,
+        ord.WEEK_NUMBER
+    FROM gl_eats_cust_t cust
+        JOIN gl_eats_ord_t ord ON 
+            cust.CUSTOMER_ID = ord.CUSTOMER_ID;
+            
+CREATE VIEW gl_eats_ord_dubai_v AS (
+SELECT ord.*, rest.CITY_NAME 
+FROM gl_eats_ord_t ord 
+	INNER JOIN  (SELECT DISTINCT 
+			RESTAURANT_ID, 
+			CITY_NAME 
+		     FROM gl_eats_rest_t
+		     WHERE CITY_NAME = 'Dubai') rest
+	ON ord.RESTAURANT_ID = rest.RESTAURANT_ID
+);
+
+CREATE VIEW gl_eats_ord_rest_v AS
+    SELECT 
+        rest.RESTAURANT_NAME,
+        rest.CITY_NAME,
+        rest.COUNTRY_CD,
+        rest.CUISINES,
+        rest.RESTAURANT_RATING,
+        ord.ORDER_ID,
+        ord.CUSTOMER_ID,
+        ord.RESTAURANT_ID,
+        ord.ORDER_COST,
+        ord.ORDER_ITEMS,
+        ord.DISCOUNT,
+        ord.WEEK_NUMBER
+    FROM gl_eats_rest_t rest
+        JOIN gl_eats_ord_t ord ON 
+            rest.RESTAURANT_ID = ord.RESTAURANT_ID;
+            
+
+-- Creating functions to solve complex business problems            
+DELIMITER $$  
+CREATE FUNCTION calcRevenue(order_cost INT, discount INT, delivery_status INT)  
+RETURNS INT  
+DETERMINISTIC  
+BEGIN  
+    DECLARE revenue INT;
+    IF delivery_status = 4 THEN  
+        SET revenue = 0;  
+    ELSEIF delivery_status = 1 OR delivery_status = 2 OR delivery_status = 3 THEN  
+        SET revenue = order_cost - discount;  
+    END IF;  
+    RETURN (revenue);  
+END;
+
+
+DELIMITER $$
+CREATE FUNCTION WORK_HOURS_F (WORK_HOURS DECIMAL(5,2)) 
+RETURNS VARCHAR(25)
+DETERMINISTIC
+BEGIN
+	DECLARE CATEGORY VARCHAR(25);
+    IF WORK_HOURS > 8 THEN
+		SET CATEGORY = 'OVER TIME';
+	ELSEIF WORK_HOURS = 8 THEN
+		SET CATEGORY = 'SHIFT TIMINGS';
+	ELSEIF WORK_HOURS < 8 THEN
+		SET CATEGORY = 'LESS THAN SHIFT TIMINGS';
+	END IF;
+RETURN CATEGORY;
+END;
+
+
+DELIMITER $$  
+CREATE FUNCTION deliveryStatusDesc(delivery_status INT)  
+RETURNS VARCHAR(20)  
+DETERMINISTIC  
+BEGIN  
+    DECLARE delivery_desc VARCHAR(20);  
+    IF delivery_status = 1 THEN  
+        SET delivery_desc = 'On-time Delivery';  
+    ELSEIF delivery_status = 2 THEN  
+        SET delivery_desc = 'Late Delivery';  
+    ELSEIF delivery_status = 3 THEN  
+        SET delivery_desc = 'Early Delivery';  
+    ELSEIF delivery_status = 4 THEN   
+	SET delivery_desc = 'Order Cancelled';  
+    END IF;  
+    RETURN (delivery_desc);  
+END;
+
+
+DELIMITER $$  
+CREATE FUNCTION orderCostBucket(order_cost INT)  
+RETURNS VARCHAR(20)  
+DETERMINISTIC  
+BEGIN  
+    DECLARE cost_bucket VARCHAR(20);  
+    IF order_cost <= 70 THEN  
+        SET cost_bucket = 'Low';  
+    ELSEIF (order_cost > 70 AND order_cost <= 120 ) THEN  
+        SET cost_bucket = 'Medium';  
+    ELSEIF order_cost > 120 THEN  
+        SET cost_bucket = 'High';  
+    END IF;  
+    RETURN (cost_bucket);  
+END;
+
+
+-- DISPLAY DATA FROM TABLES
+SELECT * FROM BANK_T LIMIT 10;
+SELECT * FROM BANK_BRANCH_T LIMIT 10;
+SELECT * FROM BANK_CUSTOMER_T LIMIT 10;
+SELECT * FROM BANK_EMPLOYEES_T LIMIT 10;
+SELECT * FROM BANK_SUPPORT_QUERY_T LIMIT 10;
+
+-- DISPLAY DATA FROM VIEWS
+SELECT * FROM BANKING_SUPPORT_QUERY_BRANCH_V LIMIT 10;
+SELECT * FROM BANKING_SUPPORT_QUERY_CUSTOMER_V LIMIT 10;
+SELECT * FROM BANKING_SUPPORT_QUERY_BRANCH_V LIMIT 10;
+
+
+-- EXPLORING THE DATA
+
+-- [1] HOW MANY CUSTOMERS DOES THE BANK HAVE?
+SELECT 
+	COUNT(DISTINCT CUSTOMER_ID) AS NUMBER_OF_CUSTOMERS
+FROM
+	BANK_CUSTOMER_T;
+
+-- [2.A] WHAT IS THE DISTRIBUTION OF CUSTOMERS ACROSS EACH STATE?
+-- [2.B] WHAT IS THE DISTRIBUTION OF CUSTOMERS ACROSS EACH CITY?
+SELECT 
+	BRANCH_STATE,
+    COUNT(CUSTOMER_ID) AS NUMBER_OF_CUSTOMERS
+FROM
+	BANK_BRANCH_T
+JOIN
+	BANK_CUSTOMER_T
+USING(BRANCH_ID)
+GROUP BY 1
+ORDER BY 2 DESC;
+
+SELECT 
+	BRANCH_CITY,
+    COUNT(CUSTOMER_ID) AS NUMBER_OF_CUSTOMERS
+FROM
+	BANK_BRANCH_T
+JOIN
+	BANK_CUSTOMER_T
+USING(BRANCH_ID)
+GROUP BY 1
+ORDER BY 2 DESC;
+
+-- [3] HOW MANY SUPPORT QUERIES HAVE BEEN RAISED?
+SELECT 
+	COUNT(SUPPORT_QUERY_ID) TOTAL_QUERIES
+FROM 
+	BANK_SUPPORT_QUERY_T;
+    
+-- [4] HOW MANY SUPPORT REPRESENTATIVES DOES THE BANK CURRENTLY HAVE? 
+SELECT
+	COUNT(DISTINCT SUPPORT_REPRESENTATIVE_ID) AS NUMBER_OF_SUPPORT_REPRESENTATIVES
+FROM
+	BANK_SUPPORT_QUERY_T;
+    
+-- [5] HOW MANY SUPPORT QUERIES ARE HANDLED BY EACH SUPPORT REPRESNTATIVE? 
+-- WHO ARE THE EMPLOYEES THAT HAVE HANDLED MORE THE 250 QUERIES?
+SELECT 
+	SUPPORT_REPRESENTATIVE_ID,
+    EMPLOYEE_NAME,
+    COUNT(SUPPORT_REPRESENTATIVE_ID) AS NUMBER_OF_SUPPORT_QUERIES
+FROM
+	BANKING_SUPPORT_QUERY_EMPLOYEE_V
+GROUP BY 1
+HAVING NUMBER_OF_SUPPORT_QUERIES > 250;
+
+-- [6] WHAT ARE THE DIFFERENT SUPPORT QUERY CATEGORIES AND HOW IS THEIR QUANTITY DISTRIBUTED?
+SELECT
+	SUPPORT_QUERY_TYPE,
+    COUNT(SUPPORT_QUERY_TYPE) AS NUMBER_OF_QUERIES
+FROM
+	BANK_SUPPORT_QUERY_T
+GROUP BY 1
+ORDER BY 2 DESC;
+
+-- [7] WHICH REGION (STATE AND CITY) HAS REPORTED THE MOST SUPPORT QUERIES?
+SELECT 
+    BRANCH_CITY,
+    COUNT(SUPPORT_QUERY_ID) AS TOTAL_SUPPORT_QUERIES
+FROM 
+	BANKING_SUPPORT_QUERY_BRANCH_V
+GROUP BY 1
+ORDER BY 2 DESC;
+
+SELECT 
+    BRANCH_STATE,
+    COUNT(SUPPORT_QUERY_ID) AS TOTAL_SUPPORT_QUERIES
+FROM 
+	BANKING_SUPPORT_QUERY_BRANCH_V
+GROUP BY 1
+ORDER BY 2 DESC;
+
+-- [8] WHAT IS THE DISTRIBUTION OF SUPPORT QUERY TYPES ACROSS EACH CITY AND STATE?
+SELECT 
+    BRANCH_CITY,
+    BRANCH_STATE,
+    SUPPORT_QUERY_TYPE,
+    COUNT(*) AS TOTAL_SUPPORT_QUERIES
+FROM 
+	BANKING_SUPPORT_QUERY_BRANCH_V
+GROUP BY 1,2,3
+ORDER BY 4 DESC;
+
+-- [9] ARE THERE ANY CUSTOMER(s) WHO HAVE RAISED 3 OR MORE SUPPORT QUERIES?
+SELECT 
+	CUSTOMER_ID,
+    COUNT(SUPPORT_QUERY_ID) AS TOTAL_NUMBER_OF_QUERIES
+FROM
+	BANKING_SUPPORT_QUERY_CUSTOMER_V
+GROUP BY 1
+HAVING TOTAL_NUMBER_OF_QUERIES >= 3
+ORDER BY 2 DESC;
+
+-- [10] CALCULATE THE CALL DURATION FOR EACH SUPPORT REPRESENTATIVE PER WEEK AND PER DAY IN HOURS
+-- ASSUME THE SUPPORT REPRESENTATIVES WORK 5 DAYS IN A WEEK
+SELECT
+	SUPPORT_REPRESENTATIVE_ID,
+    SUM(CALL_DURATION)/60 AS TOTAL_CALL_DURATION_PER_WEEK,
+    SUM(CALL_DURATION)/60/5 TOTAL_CALL_DURATION_PER_DAY
+FROM
+	BANK_SUPPORT_QUERY_T
+GROUP BY 1;
+
+-- [11] CATEGORIZE THE WORK HOURS INTO 
+   -- 1. OVER TIME : IF THE WORK HOURS PER DAY IS MORE THAN 8 HOURS PER DAY 
+   -- 2. FIXED TIME : IF THE WORK HOURS IS EXACTLY 8 HOURS PER DAY
+   -- 3. LESS THAN SHIFT HOURS : IF THE WORK HOURS IS LESS THAN 8 HOURS PER DAY
+-- WRITE A FUNCTION TO DO THIS
+SELECT
+	SUPPORT_REPRESENTATIVE_ID,
+	WORK_HOURS_F(SUM(CALL_DURATION)/60/5) AS WORK_HOURS
+FROM
+	BANK_SUPPORT_QUERY_T
+GROUP BY 1;
+
+-- [12] FIND HOW MANY HOME LOAN QUERIES HAVE BEEN RAISED IN EACH BRANCH 
+-- WHICH BRANCH HAS REPORTED THE MOST HOME LOAN QUERIES? 
+SELECT 
+	BRANCH_ID,
+    BRANCH_STATE,
+    BRANCH_CITY,
+    COUNT(*) AS NUMBER_OF_HOME_LOAN_QUERIES
+FROM 
+	banking_support_query_branch_v
+WHERE
+	SUPPORT_QUERY_TYPE = 'HOME LOAN'
+GROUP BY 1,2,3
+ORDER BY 4 DESC;
+
+-- [13] FIND THE CUSTOMER and BRANCH DETAILS ABOUT SUPPORT QUERIES WHOSE CALL DURATION IS MORE THAN 8 MINUTES
+SELECT 
+	SQC.CUSTOMER_ID, 
+    SQB.BRANCH_ID,
+    SQB.BRANCH_STATE,
+    SQB.BRANCH_CITY,
+    SQC.SUPPORT_QUERY_ID, 
+    SQC.SUPPORT_QUERY_TYPE,
+    SQC.SUPPORT_REPRESENTATIVE_ID,
+    SQC.CALL_DURATION
+FROM banking_support_query_customer_v SQC
+JOIN banking_support_query_branch_v SQB
+USING(SUPPORT_QUERY_ID)
+WHERE SQC.CALL_DURATION >= 8; 
