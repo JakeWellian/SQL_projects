@@ -5,7 +5,7 @@
 -----------------------------------------------------------------------------------------------------------------------------------
 
 Business Context: How has Body Mass Index (BMI) been changing over the last decades? It is common knowledge that global BMI is rising, but by how much? How quickly? 
-And which countries are most suscptible to these rising trends? The World Health Organistation (WHO) lists a high BMI as a major risk factor for heart disease, stroke,
+And which countries are most susceptible to these rising trends? The World Health Organistation (WHO) lists a high BMI as a major risk factor for heart disease, stroke,
 bone and joint problems, and a number of cancers, including breast, colon and endometrial cancer. It is also known that a healthy BMI increases your odds of a longer and 
 healthier life. As a result analysing BMI data acts as a strong basis for learning about the global health situation and because it is a single measure, the data is easy to 
 comprend and easy to collect.
