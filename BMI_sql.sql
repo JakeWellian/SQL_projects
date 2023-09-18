@@ -15,12 +15,16 @@ of the situation using analytical and visual tools to highlight key trends. The 
 be extended once additional data is supplied by NCD-RisC.
 
 Summary:
--- The average BMI globally has increase by 15.%. It now stands at 25.9 which classes the globe as "overweight". Overweight is a BMI between 25.0 - 29.9.
+-- The average BMI globally has increase by 15%. It now stands at 25.9 which classes the globe as "overweight". Overweight is a BMI between 25.0 - 29.9.
 -- In 2016, American Samoa had the largest average BMI with 32.5. This classes them as "Obese" (30.0 and above). Eight other countries are also classed a obese.
 -- The Pacific region is the most susceptible to high BMI with an average of 29.3 in 2016.
 -- In 1975 74.5% of countries were classed as "healthy weight". In 2016 this number dropeed to 34.0% and the number of overweight countries has gone from 12.5% to 61.0%.
 -- In 1975 10.5% of countries were "underweight". Since 1987, all of these countries have moved up to "healthy weight".
--- 4% of countries have an average BMI of "obese" compared to 0.5% in 1975. 
+-- 4% of countries have an average BMI of "obese" compared to 0.5% in 1975.
+
+Python & Tableau:
+-- Full report + BMI calculator comparing your score with your country's average + global average. See more at https://github.com/JakeWellian/Python_projects/blob/main/BMI_python.ipynb 
+-- Created dynamic visualizations of global obesity trends with Tableau. See more at https://public.tableau.com/app/profile/jake.wellian/viz/GlobalBMItrends/Story
 
 -----------------------------------------------------------------------------------------------------------------------------------
 
